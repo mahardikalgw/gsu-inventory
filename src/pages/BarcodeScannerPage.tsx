@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { QrCode, Camera, Search, Package, MapPin, Calendar, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { Camera as ReactCamera } from 'react-camera-pro';
 
 interface ScannedItem {
   id: string;
@@ -35,8 +37,8 @@ const BarcodeScannerPage = () => {
   const [scannedItem, setScannedItem] = useState<ScannedItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const cameraRef = useRef<{ video: HTMLVideoElement } | null>(null);
+  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
 
   // Reset search data
   const resetSearchData = () => {
@@ -45,32 +47,35 @@ const BarcodeScannerPage = () => {
     setScannedCode('');
   };
 
-  const startScanning = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+  const startScanning = () => {
+    setIsScanning(true);
+    // Start ZXing scanner
+    if (cameraRef.current) {
+      codeReader.current = new BrowserMultiFormatReader();
+      codeReader.current.decodeFromVideoDevice(undefined, cameraRef.current.video, (result, err) => {
+        if (result && isScanning) {
+          const code = result.getText();
+          setScannedCode(code);
+          setIsScanning(false);
+          stopScanning();
+          searchByBarcode(code);
+        }
+        // ignore NotFoundException, just keep scanning
       });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsScanning(true);
-      }
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      toast.error('Tidak dapat mengakses kamera. Periksa izin kamera.');
     }
   };
 
   const stopScanning = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
     setIsScanning(false);
+    if (codeReader.current) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (codeReader.current as any).reset();
+      } catch (e) {
+        // ignore reset errors
+      }
+      codeReader.current = null;
+    }
   };
 
   const searchByBarcode = async (barcode: string) => {
@@ -223,23 +228,26 @@ const BarcodeScannerPage = () => {
                 </Button>
               </div>
 
-              {isScanning && (
+              {isScanning ? (
                 <div className="relative">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-64 bg-black rounded-lg object-cover"
+                  <ReactCamera
+                    ref={cameraRef}
+                    facingMode="environment"
+                    aspectRatio={4/3}
+                    errorMessages={{
+                      noCameraAccessible: 'Tidak dapat mengakses kamera',
+                      permissionDenied: 'Izin kamera ditolak',
+                      switchCamera: 'Ganti kamera',
+                      canvas: 'Canvas tidak tersedia'
+                    }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="border-2 border-white/50 rounded-lg p-4">
                       <div className="w-48 h-32 border-2 border-white rounded"></div>
                     </div>
                   </div>
                 </div>
-              )}
-
-              {!isScanning && (
+              ) : (
                 <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <QrCode className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
