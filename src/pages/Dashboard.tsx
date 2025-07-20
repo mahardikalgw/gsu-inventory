@@ -148,7 +148,7 @@ const Dashboard = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
         <p className="text-muted-foreground">
-          Overview of your inventory management system
+          Halaman untuk manajemen inventaris
         </p>
       </div>
 
@@ -156,26 +156,26 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-gradient-card shadow-card hover:shadow-elevated transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Barang</CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{stats.totalItems}</div>
             <p className="text-xs text-muted-foreground">
-              Total inventory items
+              Total Barang
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card shadow-card hover:shadow-elevated transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recently Added</CardTitle>
+            <CardTitle className="text-sm font-medium">Baru ditambahkan</CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">{stats.recentlyAdded}</div>
             <p className="text-xs text-muted-foreground">
-              Added in last 7 days
+              Ditambahkan 7 hari yang lalu
             </p>
           </CardContent>
         </Card>
