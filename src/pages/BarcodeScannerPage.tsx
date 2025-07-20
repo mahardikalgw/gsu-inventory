@@ -49,19 +49,35 @@ const BarcodeScannerPage = () => {
 
   const startScanning = () => {
     setIsScanning(true);
+    console.log('Starting scanner...');
+    
     // Start ZXing scanner
     if (cameraRef.current) {
+      console.log('Camera ref found, starting ZXing...');
       codeReader.current = new BrowserMultiFormatReader();
-      codeReader.current.decodeFromVideoDevice(undefined, cameraRef.current.video, (result, err) => {
-        if (result && isScanning) {
-          const code = result.getText();
-          setScannedCode(code);
-          setIsScanning(false);
-          stopScanning();
-          searchByBarcode(code);
+      
+      // Wait a bit for camera to be ready
+      setTimeout(() => {
+        if (cameraRef.current?.video && codeReader.current) {
+          console.log('Starting ZXing decode...');
+          codeReader.current.decodeFromVideoDevice(undefined, cameraRef.current.video, (result, err) => {
+            console.log('ZXing callback:', { result: result?.getText(), err });
+            if (result && isScanning) {
+              const code = result.getText();
+              console.log('Barcode detected:', code);
+              setScannedCode(code);
+              setIsScanning(false);
+              stopScanning();
+              searchByBarcode(code);
+            }
+            // ignore NotFoundException, just keep scanning
+          });
+        } else {
+          console.log('Camera or codeReader not ready');
         }
-        // ignore NotFoundException, just keep scanning
-      });
+      }, 1000);
+    } else {
+      console.log('Camera ref not found');
     }
   };
 
