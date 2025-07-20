@@ -37,60 +37,77 @@ const BarcodeScannerPage = () => {
   const [scannedItem, setScannedItem] = useState<ScannedItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
-  const cameraRef = useRef<{ video: HTMLVideoElement } | null>(null);
-  const codeReader = useRef<BrowserMultiFormatReader | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [scanningImage, setScanningImage] = useState(false);
+  const cameraRef = useRef<{ takePhoto: () => string; video: HTMLVideoElement } | null>(null);
 
   // Reset search data
   const resetSearchData = () => {
     setScannedItem(null);
     setManualBarcode('');
     setScannedCode('');
+    setCapturedImage(null);
   };
 
   const startScanning = () => {
     setIsScanning(true);
-    console.log('Starting scanner...');
-    
-    // Start ZXing scanner
-    if (cameraRef.current) {
-      console.log('Camera ref found, starting ZXing...');
-      codeReader.current = new BrowserMultiFormatReader();
-      
-      // Wait a bit for camera to be ready
-      setTimeout(() => {
-        if (cameraRef.current?.video && codeReader.current) {
-          console.log('Starting ZXing decode...');
-          codeReader.current.decodeFromVideoDevice(undefined, cameraRef.current.video, (result, err) => {
-            console.log('ZXing callback:', { result: result?.getText(), err });
-            if (result && isScanning) {
-              const code = result.getText();
-              console.log('Barcode detected:', code);
-              setScannedCode(code);
-              setIsScanning(false);
-              stopScanning();
-              searchByBarcode(code);
-            }
-            // ignore NotFoundException, just keep scanning
-          });
-        } else {
-          console.log('Camera or codeReader not ready');
-        }
-      }, 1000);
-    } else {
-      console.log('Camera ref not found');
-    }
+    setCapturedImage(null);
+    console.log('Camera started');
   };
 
   const stopScanning = () => {
     setIsScanning(false);
-    if (codeReader.current) {
+    setCapturedImage(null);
+  };
+
+  const takePhoto = () => {
+    if (cameraRef.current) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (codeReader.current as any).reset();
-      } catch (e) {
-        // ignore reset errors
+        const photo = cameraRef.current.takePhoto();
+        setCapturedImage(photo);
+        setIsScanning(false);
+        console.log('Photo taken, scanning for barcode...');
+        scanBarcodeFromImage(photo);
+      } catch (error) {
+        console.error('Error taking photo:', error);
+        toast.error('Gagal mengambil foto. Coba lagi.');
       }
-      codeReader.current = null;
+    }
+  };
+
+  const scanBarcodeFromImage = async (imageDataUrl: string) => {
+    setScanningImage(true);
+    try {
+      const codeReader = new BrowserMultiFormatReader();
+      
+      // Convert data URL to canvas
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          
+          try {
+            const result = await codeReader.decodeFromCanvas(canvas);
+            const code = result.getText();
+            console.log('Barcode found:', code);
+            setScannedCode(code);
+            searchByBarcode(code);
+          } catch (error) {
+            console.error('No barcode found in image:', error);
+            toast.error('Tidak ada barcode ditemukan dalam foto. Coba lagi dengan foto yang lebih jelas.');
+          }
+        }
+        setScanningImage(false);
+      };
+      img.src = imageDataUrl;
+    } catch (error) {
+      console.error('Error scanning image:', error);
+      toast.error('Gagal memindai barcode dari foto.');
+      setScanningImage(false);
     }
   };
 
@@ -233,15 +250,32 @@ const BarcodeScannerPage = () => {
                   {isScanning ? (
                     <>
                       <Camera className="w-4 h-4 mr-2" />
-                      Hentikan Pemindai
+                      Hentikan Kamera
                     </>
                   ) : (
                     <>
                       <Camera className="w-4 h-4 mr-2" />
-                      Mulai Pemindai
+                      Mulai Kamera
                     </>
                   )}
                 </Button>
+                
+                {isScanning && (
+                  <Button 
+                    onClick={takePhoto}
+                    disabled={scanningImage}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {scanningImage ? (
+                      'Memindai...'
+                    ) : (
+                      <>
+                        <QrCode className="w-4 h-4 mr-2" />
+                        Ambil Foto & Scan
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
 
               {isScanning ? (
@@ -263,11 +297,24 @@ const BarcodeScannerPage = () => {
                     </div>
                   </div>
                 </div>
+              ) : capturedImage ? (
+                <div className="relative">
+                  <img 
+                    src={capturedImage} 
+                    alt="Captured barcode" 
+                    className="w-full h-64 bg-black rounded-lg object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="border-2 border-white/50 rounded-lg p-4">
+                      <div className="w-48 h-32 border-2 border-white rounded"></div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <QrCode className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Klik "Mulai Pemindai" untuk memulai</p>
+                    <p className="text-muted-foreground">Klik "Mulai Kamera" untuk memulai</p>
                   </div>
                 </div>
               )}
