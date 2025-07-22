@@ -597,14 +597,6 @@ const InventoryItemModal: React.FC<InventoryItemModalProps> = ({
                 />
               </div>
 
-              {/* Image Upload */}
-              <div>
-                <Label>Gambar Item</Label>
-                <FileUpload
-                  onUploadComplete={handleImageUpload}
-                  currentImageUrl={formData.image_url}
-                />
-              </div>
             </div>
           </div>
 
