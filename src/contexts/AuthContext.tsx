@@ -56,7 +56,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               if (error) reject(error);
               else resolve({ data });
             })
-            .catch(reject);
         });
 
         const { data } = await Promise.race([timeout, request]);
